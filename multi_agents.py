@@ -4,6 +4,9 @@ import util
 from game import Agent, Action
 from typing import Tuple
 
+from game_state import GameState
+
+
 def snake_dist(p1: Tuple[int, int], p2: Tuple[int, int], rows: int, cols: int) -> int:
     snake_indexes = np.arange(rows * cols).reshape(rows, cols)
     snake_indexes[-2::-2] = snake_indexes[-2::-2][:, ::-1]
@@ -99,7 +102,7 @@ class MultiAgentSearchAgent(Agent):
 
 
 class MinmaxAgent(MultiAgentSearchAgent):
-    def get_action(self, game_state):
+    def get_action(self, game_state: GameState) -> Action:
         """
         Returns the minimax action from the current gameState using self.depth
         and self.evaluationFunction.
@@ -116,9 +119,33 @@ class MinmaxAgent(MultiAgentSearchAgent):
         game_state.generate_successor(agent_index, action):
             Returns the successor game state after an agent takes an action
         """
-        """*** YOUR CODE HERE ***"""
-        util.raiseNotDefined()
+        legal_moves = game_state.get_legal_actions(agent_index=0)
+        scores = [self.min_value(game_state.generate_successor(agent_index=0, action=action), 1) for action in legal_moves]
+        best_score = max(scores)
+        best_indices = [index for index in range(len(scores)) if scores[index] == best_score]
+        chosen_index = np.random.choice(best_indices)  # Pick randomly among the best
 
+        return legal_moves[chosen_index]
+
+    def max_value(self, state: GameState, depth: int) -> float:
+        if state.done or depth == self.depth:
+            return self.evaluation_function(state)
+
+        val = -np.inf
+        for action in state.get_legal_actions(agent_index=0):
+            val = max(val, self.min_value(state.generate_successor(agent_index=0, action=action), depth + 1))
+
+        return val
+
+    def min_value(self, state: GameState, depth: int) -> float:
+        if state.done or depth == self.depth:
+            return self.evaluation_function(state)
+
+        val = np.inf
+        for action in state.get_legal_actions(agent_index=1):
+            val = min(val, self.max_value(state.generate_successor(agent_index=1, action=action), depth))
+
+        return val
 
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
