@@ -10,7 +10,7 @@ from game_state import GameState
 def snake_dist(p1: Tuple[int, int], p2: Tuple[int, int], rows: int, cols: int) -> int:
     snake_indexes = np.arange(rows * cols).reshape(rows, cols)
     snake_indexes[-2::-2] = snake_indexes[-2::-2][:, ::-1]
-    snake_distance = abs(snake_indexes[p1[0],p1[1]] - snake_indexes[p2[0],p2[1]])
+    snake_distance = abs(snake_indexes[p1[0], p1[1]] - snake_indexes[p2[0], p2[1]])
     return snake_distance
 
 
@@ -120,7 +120,8 @@ class MinmaxAgent(MultiAgentSearchAgent):
             Returns the successor game state after an agent takes an action
         """
         legal_moves = game_state.get_legal_actions(agent_index=0)
-        scores = [self.min_value(game_state.generate_successor(agent_index=0, action=action), 1) for action in legal_moves]
+        scores = [self.min_value(game_state.generate_successor(agent_index=0, action=action), 1)
+                  for action in legal_moves]
         best_score = max(scores)
         best_indices = [index for index in range(len(scores)) if scores[index] == best_score]
         chosen_index = np.random.choice(best_indices)  # Pick randomly among the best
@@ -157,9 +158,44 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         """
         Returns the minimax action using self.depth and self.evaluationFunction
         """
-        """*** YOUR CODE HERE ***"""
-        util.raiseNotDefined()
+        legal_moves = game_state.get_legal_actions(agent_index=0)
+        scores = [self.min_value(game_state.generate_successor(agent_index=0, action=action), 1, -np.inf, np.inf) for
+                  action in legal_moves]
+        best_score = max(scores)
+        best_indices = [index for index in range(len(scores)) if scores[index] == best_score]
+        chosen_index = np.random.choice(best_indices)  # Pick randomly among the best
 
+        return legal_moves[chosen_index]
+
+    def max_value(self, state: GameState, depth: int, alpha: float, beta: float) -> float:
+        if state.done or depth == self.depth:
+            return self.evaluation_function(state)
+
+        val = -np.inf
+
+        for action in state.get_legal_actions(agent_index=0):
+            val = max(val, self.min_value(state.generate_successor(agent_index=0, action=action),
+                                          depth + 1, alpha, beta))
+            if val >= beta:
+                break  # beta cutoff
+            alpha = max(alpha, val)
+
+        return val
+
+    def min_value(self, state: GameState, depth: int, alpha: float, beta: float) -> float:
+        if state.done or depth == self.depth:
+            return self.evaluation_function(state)
+
+        val = np.inf
+
+        for action in state.get_legal_actions(agent_index=1):
+            val = min(val, self.max_value(state.generate_successor(agent_index=1, action=action),
+                                          depth, alpha, beta))
+            if val <= alpha:
+                break  # alpha cutoff
+            beta = min(beta, val)
+
+        return val
 
 
 class ExpectimaxAgent(MultiAgentSearchAgent):
@@ -176,9 +212,6 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
         """
         """*** YOUR CODE HERE ***"""
         util.raiseNotDefined()
-
-
-
 
 
 def better_evaluation_function(current_game_state):
