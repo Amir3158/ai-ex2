@@ -2,6 +2,13 @@ import numpy as np
 import abc
 import util
 from game import Agent, Action
+from typing import Tuple
+
+def snake_dist(p1: Tuple[int, int], p2: Tuple[int, int], rows: int, cols: int) -> int:
+    snake_indexes = np.arange(rows * cols).reshape(rows, cols)
+    snake_indexes[-2::-2] = snake_indexes[-2::-2][:, ::-1]
+    snake_distance = abs(snake_indexes[p1[0],p1[1]] - snake_indexes[p2[0],p2[1]])
+    return snake_distance
 
 
 class ReflexAgent(Agent):
