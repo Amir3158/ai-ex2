@@ -7,10 +7,10 @@ from typing import Tuple
 from game_state import GameState
 
 
-def snake_dist(p1: Tuple[int, int], p2: Tuple[int, int], rows: int, cols: int) -> int:
+def snake_distance(origin_point: int, target_snake_idx: int, rows: int, cols: int) -> int:
     snake_indexes = np.arange(rows * cols).reshape(rows, cols)
     snake_indexes[-2::-2] = snake_indexes[-2::-2][:, ::-1]
-    snake_distance = abs(snake_indexes[p1[0], p1[1]] - snake_indexes[p2[0], p2[1]])
+    snake_distance = abs(snake_indexes.ravel()[origin_point] - snake_indexes.ravel()[target_snake_idx])
     return snake_distance
 
 
@@ -37,14 +37,16 @@ class ReflexAgent(Agent):
         legal_moves = game_state.get_agent_legal_actions()
 
         # Choose one of the best actions
-        scores = [self.evaluation_function(game_state, action) for action in legal_moves]
-        best_score = max(scores)
-        best_indices = [index for index in range(len(scores)) if scores[index] == best_score]
-        chosen_index = np.random.choice(best_indices)  # Pick randomly among the best
+        # scores = [self.evaluation_function(game_state, action) for action in legal_moves]
+        action_to_score = {action: self.evaluation_function(game_state, action) for action in legal_moves}
+        # best_score = max(scores)
+        best_action = max(action_to_score, key=action_to_score.get)
+        # best_indices = [index for index in range(len(scores)) if scores[index] == best_score]
+        # chosen_index = np.random.choice(best_indices)  # Pick randomly among the best
 
-        "Add more of your code here if you want to"
-
-        return legal_moves[chosen_index]
+        # print(action_to_score)
+        return best_action
+        # return legal_moves[chosen_index]
 
     def evaluation_function(self, current_game_state, action):
         """
@@ -54,16 +56,43 @@ class ReflexAgent(Agent):
         GameStates (GameState.py) and returns a number, where higher numbers are better.
 
         """
-
-        # Useful information you can extract from a GameState (game_state.py)
+        # thresholds
+        THRESH_FUSED_TILES = 0.1
+        THRESH_UP_ACTION = 0.5
+        THRESH_MAX_TILE = 1
+        THRESH_MAX_TILE_DEGRADE = 0.5
+        CALC_FUSED_TILES = lambda score, num_fused_tiles, max_tile: score * (1 + (THRESH_FUSED_TILES * num_fused_tiles)) - (max_tile * THRESH_MAX_TILE_DEGRADE)
+        CALC_SCORE_SNAKE = lambda tile_val, snake_dist, target_snake_idx : (tile_val / (snake_dist + 1)) * target_snake_idx
 
         successor_game_state = current_game_state.generate_successor(action=action)
-        board = successor_game_state.board
+        board: np.ndarray = successor_game_state.board
         max_tile = successor_game_state.max_tile
         score = successor_game_state.score
 
-        "*** YOUR CODE HERE ***"
-        return score
+        num_fused_tiles = np.count_nonzero(current_game_state.board) - np.count_nonzero(successor_game_state.board)
+
+        all_tiles_idxes = np.argsort(board.ravel())
+        snake_end = board.size - 1
+        sum_score = 0
+
+        for i, tile_idx in enumerate(reversed(all_tiles_idxes)):
+            tile_val = board[np.unravel_index(tile_idx, board.shape)]
+            if not tile_val:
+                break
+            target_snake_idx = snake_end - i
+            snake_dist = snake_distance(tile_idx, target_snake_idx, *board.shape)
+            score_for_tile = CALC_SCORE_SNAKE(tile_val, snake_dist, target_snake_idx)
+            sum_score += score_for_tile
+
+        if action is action.UP:
+            sum_score *= THRESH_UP_ACTION
+
+        sum_score += max_tile * THRESH_MAX_TILE
+
+        if num_fused_tiles > 0:
+            sum_score = CALC_FUSED_TILES(sum_score, num_fused_tiles, max_tile)
+
+        return sum_score
 
 
 def score_evaluation_function(current_game_state):
@@ -159,7 +188,7 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         Returns the minimax action using self.depth and self.evaluationFunction
         """
         legal_moves = game_state.get_legal_actions(agent_index=0)
-        scores = [self.min_value(game_state.generate_successor(agent_index=0, action=action), self.depth-1, -np.inf, np.inf) for
+        scores = [self.min_value(game_state.generate_successor(agent_index=0, action=action), self.depth - 1, -np.inf, np.inf) for
                   action in legal_moves]
         best_score = max(scores)
         best_indices = [index for index in range(len(scores)) if scores[index] == best_score]

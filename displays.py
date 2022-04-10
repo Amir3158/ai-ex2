@@ -27,9 +27,14 @@ class SummaryDisplay(object):
 
     def print_stats(self):
         win_rate = len(list(filter(lambda x: x >= 2048, self.highest_tile))) / len(self.highest_tile)
+        counts = dict()
+        for i in self.highest_tile:
+            counts[i] = counts.get(i, 0) + 1
         print("="*30)
         print("scores: %s" % self.scores)
         print("highest tile: %s" % self.highest_tile)
         print("game_durations: %s" % self.game_durations)
+        print("avg score: %s" % round((sum(self.scores) / len(self.scores))))
+        print("cnt highest tile: %s" % counts)
         print("avg game duration: %s" % round((sum(self.game_durations) / len(self.game_durations)), 3))
         print("win rate: %s" % win_rate)
