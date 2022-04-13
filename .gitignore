@@ -3,6 +3,7 @@
 *.tar
 *.tar.gz
 .idea
+README*
 
 # Created by https://www.toptal.com/developers/gitignore/api/python,pycharm,visualstudiocode,pycharm+iml
 # Edit at https://www.toptal.com/developers/gitignore?templates=python,pycharm,visualstudiocode,pycharm+iml
