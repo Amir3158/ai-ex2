@@ -349,7 +349,7 @@ def better_evaluation_function(current_game_state):
     max_tile = current_game_state.max_tile
     score = current_game_state.score
 
-    WEIGHTS = [1, 1, 0] # TODO can change coeffs
+    WEIGHTS = [2, 1, 0] # TODO can change coeffs
 
     weights = np.array(WEIGHTS)
 
