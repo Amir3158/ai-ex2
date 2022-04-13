@@ -1,6 +1,12 @@
 import argparse
+import itertools
+import multiprocessing
+
 import numpy
 import os
+
+import numpy as np
+
 import util
 from game import Game, RandomOpponentAgent
 from game_state import GameState
@@ -88,10 +94,27 @@ def main():
                              sleep_between_actions=args.sleep_between_actions)
     for i in range(args.num_of_games):
         score = game_runner.new_game(initial_state=initial_state)
+
     if display is not None:
         display.print_stats()
 
+    return str(display)
+
 
 if __name__ == '__main__':
+    # cores = os.cpu_count()
+    # # cores = 1
+    # pool = multiprocessing.Pool(processes=cores)
+    # w = np.linspace(1, 0, 5)
+    # tasks = ([w_mono, w_empty, w_clustering] for w_mono, w_empty, w_clustering in itertools.combinations_with_replacement(w, r=3))
+    # results = []
+    #
+    # r = pool.map_async(main, tasks, callback=results.append)
+    #
+    # r.wait()
+    # from rich import print
+    # print(results)
+    # pool.close()
+    # pool.join()
     main()
     input("Press Enter to continue...")

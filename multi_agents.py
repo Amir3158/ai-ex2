@@ -2,7 +2,7 @@ import numpy as np
 import abc
 import util
 from game import Agent, Action
-from typing import Tuple
+from typing import Tuple, Union
 
 from game_state import GameState
 
@@ -170,33 +170,6 @@ class MinmaxAgent(MultiAgentSearchAgent):
                 val = min(val, self.minimax(state.generate_successor(agent_index=player, action=action), depth=depth, player=1 - player))
             return val
 
-    # def get_action(self, game_state: GameState) -> Action:
-    #     legal_moves = game_state.get_agent_legal_actions()
-    #     action_to_score = {action: self.min_value(game_state.generate_successor(agent_index=0, action=action), self.depth - 1)
-    #                        for action in legal_moves}
-    #     best_action = max(action_to_score, key=action_to_score.get)
-    #     return best_action
-    #
-    # def max_value(self, state: GameState, depth: int) -> float:
-    #     if state.done or depth == 0:
-    #         return self.evaluation_function(state)
-    #
-    #     val = -np.inf
-    #     for action in state.get_legal_actions(agent_index=0):
-    #         val = max(val, self.min_value(state.generate_successor(agent_index=0, action=action), depth - 1))
-    #
-    #     return val
-    #
-    # def min_value(self, state: GameState, depth: int) -> float:
-    #     if state.done or depth == 0:
-    #         return self.evaluation_function(state)
-    #
-    #     val = np.inf
-    #     for action in state.get_legal_actions(agent_index=1):
-    #         val = min(val, self.max_value(state.generate_successor(agent_index=1, action=action), depth))
-    #
-    #     return val
-
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
     """
@@ -241,50 +214,6 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
 
             return val
 
-    # def get_action(self, game_state):
-    #     """
-    #     Returns the minimax action using self.depth and self.evaluationFunction
-    #     """
-    #
-    #     legal_moves = game_state.get_legal_actions(agent_index=0)
-    #     scores = [self.min_value(game_state.generate_successor(agent_index=0, action=action), self.depth - 1, -np.inf, np.inf) for
-    #               action in legal_moves]
-    #     best_score = max(scores)
-    #     best_indices = [index for index in range(len(scores)) if scores[index] == best_score]
-    #     chosen_index = np.random.choice(best_indices)  # Pick randomly among the best
-    #
-    #     return legal_moves[chosen_index]
-    #
-    # def max_value(self, state: GameState, depth: int, alpha: float, beta: float) -> float:
-    #     if state.done or depth == 0:
-    #         return self.evaluation_function(state)
-    #
-    #     val = -np.inf
-    #
-    #     for action in state.get_legal_actions(agent_index=0):
-    #         val = max(val, self.min_value(state.generate_successor(agent_index=0, action=action),
-    #                                       depth - 1, alpha, beta))
-    #         if val >= beta:
-    #             break  # beta cutoff
-    #         alpha = max(alpha, val)
-    #
-    #     return val
-    #
-    # def min_value(self, state: GameState, depth: int, alpha: float, beta: float) -> float:
-    #     if state.done or depth == 0:
-    #         return self.evaluation_function(state)
-    #
-    #     val = np.inf
-    #
-    #     for action in state.get_legal_actions(agent_index=1):
-    #         val = min(val, self.max_value(state.generate_successor(agent_index=1, action=action),
-    #                                       depth, alpha, beta))
-    #         if val <= alpha:
-    #             break  # alpha cutoff
-    #         beta = min(beta, val)
-    #
-    #     return val
-
 
 class ExpectimaxAgent(MultiAgentSearchAgent):
     """
@@ -321,26 +250,94 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
 
             return sum(vals) / len(vals)
 
-    # def max_value(self, state: GameState, depth: int) -> float:
-    #     if state.done or depth == 0:
-    #         return self.evaluation_function(state)
-    #
-    #     val = -np.inf
-    #     for action in state.get_legal_actions(agent_index=0):
-    #         val = max(val, self.exp_value(state.generate_successor(agent_index=0, action=action), depth - 1))
-    #
-    #     return val
-    #
-    # def exp_value(self, state: GameState, depth: int) -> float:
-    #     if state.done or depth == 0:
-    #         return self.evaluation_function(state)
-    #
-    #     vals = []
-    #     for action in state.get_legal_actions(agent_index=1):
-    #         vals.append(self.max_value(state.generate_successor(agent_index=1, action=action), depth))
-    #
-    #     return sum(vals) / len(vals)
 
+def monotonicity(board: np.ndarray) -> Tuple[float, float, float]:
+    best = -1
+
+    for i in range(4):
+        best = max(best, np.count_nonzero(np.diff(board) >= 0) + \
+                   np.count_nonzero(np.diff(board, axis=0) >= 0))
+
+        board = np.rot90(board)
+
+    # return normalize(best, 0, 24)
+    return best
+
+
+def empty_board(board: np.ndarray) -> Tuple[float, float, float]:
+    # return normalize(np.count_nonzero(board == 0), 0, board.size)
+    return np.count_nonzero(board == 0)
+
+
+def corner_heuristic(board: np.ndarray) -> Tuple[float, float, float]:
+    weights = np.array([[0, 1, 2, 3],
+                        [1, 2, 3, 4],
+                        [2, 3, 4, 5],
+                        [3, 4, 5, 6]])
+
+    sorted_weights = np.sort(weights.ravel())
+    sorted_board = np.sort(board.ravel())
+
+    # return normalize((board * weights).sum(),
+    #                  (sorted_weights * sorted_board[::-1]).sum(),
+    #                  (sorted_weights * sorted_board).sum())
+
+    return (board * weights).sum()
+
+
+def in_range(board, row, col):
+    return not ((row < 0 or row >= board.shape[0]) or (col < 0 or col >= board.shape[1]))
+
+
+def clustering(board: np.ndarray) -> Tuple[float, float, float]:
+    OFFSETS = [-1, 0, 1]
+    clustering_score = 0
+
+    for row in range(board.shape[0]):
+        for col in range(board.shape[1]):
+            if board[row][col] == 0:
+                continue
+
+            tmp_score = 0
+            total_neighbours = 0
+
+            for k in OFFSETS:
+                for l in OFFSETS:
+                    p = row + k
+                    q = col + l
+
+                    if in_range(board, p, q) and board[p][q] > 0:
+                        total_neighbours += 1
+                        tmp_score += abs(board[row][col] - board[p][q])
+
+            if total_neighbours:
+                clustering_score += (tmp_score / total_neighbours)
+
+    # lower clustering_score means better board
+    min_val = np.sum(np.diff(np.sort(board.ravel())))
+    # return 1 - normalize(clustering_score , min_val, clustering_score)
+    return clustering_score
+
+
+def normalize(value: Union[float, np.ndarray], min_val: float, max_val: float):
+    if max_val == min_val:
+        return value
+
+    if not isinstance(value, np.ndarray) and value - min_val == 0:
+        normalized = 0
+    else:
+        normalized = (value - min_val) / (max_val - min_val)
+
+    # # TODO remote asserts
+    # if isinstance(value, np.ndarray):
+    #     if not all(0 <= normalized) and all(normalized <= 1):
+    #         assert False
+    #
+    # else:
+    #     if not 0 <= normalized <= 1:
+    #         assert False
+
+    return normalized
 
 def better_evaluation_function(current_game_state):
     """
@@ -348,8 +345,24 @@ def better_evaluation_function(current_game_state):
 
     DESCRIPTION: <write something here so we know what you did>
     """
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    board: np.ndarray = current_game_state.board
+    max_tile = current_game_state.max_tile
+    score = current_game_state.score
+
+    WEIGHTS = [1, 1, 0] # TODO can change coeffs
+
+    weights = np.array(WEIGHTS)
+
+    # coef = normalize(weights, min(weights), max(weights))
+    coef = WEIGHTS
+
+    scores = [monotonicity(board),
+              empty_board(board),
+              clustering(board)]
+
+
+    # print(f'scores before coeffs = {scores}')
+    return np.sum(np.multiply(scores, coef))
 
 
 # Abbreviation

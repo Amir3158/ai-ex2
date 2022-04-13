@@ -38,3 +38,22 @@ class SummaryDisplay(object):
         print("cnt highest tile: %s" % counts)
         print("avg game duration: %s" % round((sum(self.game_durations) / len(self.game_durations)), 3))
         print("win rate: %s" % win_rate)
+        # print("=" * 30)
+
+    def __repr__(self):
+        win_rate = len(list(filter(lambda x: x >= 2048, self.highest_tile))) / len(self.highest_tile)
+        counts = dict()
+        for i in self.highest_tile:
+            counts[i] = counts.get(i, 0) + 1
+
+        return f"scores: {self.scores}" \
+               f"highest tile: {self.highest_tile}" \
+               f"game_durations: {self.game_durations}" \
+               f"avg score: {round((sum(self.scores) / len(self.scores)))}" \
+               f"cnt highest tile: {counts}" \
+               f"avg game duration: {round((sum(self.game_durations) / len(self.game_durations)), 3)}" \
+               f"win rate: {win_rate}" \
+               "=" * 30
+
+    def __str__(self):
+        return self.__repr__()
