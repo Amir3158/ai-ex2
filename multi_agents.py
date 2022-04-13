@@ -62,7 +62,7 @@ class ReflexAgent(Agent):
         THRESH_MAX_TILE = 1
         THRESH_MAX_TILE_DEGRADE = 0.5
         CALC_FUSED_TILES = lambda score, num_fused_tiles, max_tile: score * (1 + (THRESH_FUSED_TILES * num_fused_tiles)) - (max_tile * THRESH_MAX_TILE_DEGRADE)
-        CALC_SCORE_SNAKE = lambda tile_val, snake_dist, target_snake_idx : (tile_val / (snake_dist + 1)) * target_snake_idx
+        CALC_SCORE_SNAKE = lambda tile_val, snake_dist, target_snake_idx: (tile_val / (snake_dist + 1)) * target_snake_idx
 
         successor_game_state = current_game_state.generate_successor(action=action)
         board: np.ndarray = successor_game_state.board
@@ -148,34 +148,53 @@ class MinmaxAgent(MultiAgentSearchAgent):
         game_state.generate_successor(agent_index, action):
             Returns the successor game state after an agent takes an action
         """
-        legal_moves = game_state.get_legal_actions(agent_index=0)
-        scores = [self.min_value(game_state.generate_successor(agent_index=0, action=action), self.depth - 1)
-                  for action in legal_moves]
-        best_score = max(scores)
-        best_indices = [index for index in range(len(scores)) if scores[index] == best_score]
-        chosen_index = np.random.choice(best_indices)  # Pick randomly among the best
+        legal_moves = game_state.get_agent_legal_actions()
+        action_to_score = {action: self.minimax(game_state, self.depth, player=0) for action in legal_moves}
+        best_action = max(action_to_score, key=action_to_score.get)
+        return best_action
 
-        return legal_moves[chosen_index]
-
-    def max_value(self, state: GameState, depth: int) -> float:
-        if state.done or depth == 0:
+    def minimax(self, state: GameState, depth: int, player: int) -> float:
+        if depth == 0 or state.done:
             return self.evaluation_function(state)
 
-        val = -np.inf
-        for action in state.get_legal_actions(agent_index=0):
-            val = max(val, self.min_value(state.generate_successor(agent_index=0, action=action), depth - 1))
+        if player == 0:  # max player
+            val = -np.inf
+            for action in state.get_legal_actions(agent_index=player):
+                val = max(val, self.minimax(state.generate_successor(agent_index=player, action=action), depth=depth - 1, player=1 - player))
+            return val
 
-        return val
+        else:  # min player
+            val = np.inf
+            for action in state.get_legal_actions(agent_index=player):
+                val = min(val, self.minimax(state.generate_successor(agent_index=player, action=action), depth=depth, player=1 - player))
+            return val
 
-    def min_value(self, state: GameState, depth: int) -> float:
-        if state.done or depth == 0:
-            return self.evaluation_function(state)
-
-        val = np.inf
-        for action in state.get_legal_actions(agent_index=1):
-            val = min(val, self.max_value(state.generate_successor(agent_index=1, action=action), depth))
-
-        return val
+    # def get_action(self, game_state: GameState) -> Action:
+    #     legal_moves = game_state.get_agent_legal_actions()
+    #     action_to_score = {action: self.min_value(game_state.generate_successor(agent_index=0, action=action), self.depth - 1)
+    #                        for action in legal_moves}
+    #     best_action = max(action_to_score, key=action_to_score.get)
+    #     return best_action
+    #
+    # def max_value(self, state: GameState, depth: int) -> float:
+    #     if state.done or depth == 0:
+    #         return self.evaluation_function(state)
+    #
+    #     val = -np.inf
+    #     for action in state.get_legal_actions(agent_index=0):
+    #         val = max(val, self.min_value(state.generate_successor(agent_index=0, action=action), depth - 1))
+    #
+    #     return val
+    #
+    # def min_value(self, state: GameState, depth: int) -> float:
+    #     if state.done or depth == 0:
+    #         return self.evaluation_function(state)
+    #
+    #     val = np.inf
+    #     for action in state.get_legal_actions(agent_index=1):
+    #         val = min(val, self.max_value(state.generate_successor(agent_index=1, action=action), depth))
+    #
+    #     return val
 
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
@@ -187,6 +206,7 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         """
         Returns the minimax action using self.depth and self.evaluationFunction
         """
+
         legal_moves = game_state.get_legal_actions(agent_index=0)
         scores = [self.min_value(game_state.generate_successor(agent_index=0, action=action), self.depth - 1, -np.inf, np.inf) for
                   action in legal_moves]
