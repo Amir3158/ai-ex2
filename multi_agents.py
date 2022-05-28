@@ -148,27 +148,30 @@ class MinmaxAgent(MultiAgentSearchAgent):
         game_state.generate_successor(agent_index, action):
             Returns the successor game state after an agent takes an action
         """
-        legal_moves = game_state.get_agent_legal_actions()
-        action_to_score = {action: self.minimax(game_state.generate_successor(agent_index=0, action=action), self.depth, player=0)
-                           for action in legal_moves}
-        best_action = max(action_to_score, key=action_to_score.get)
-        return best_action
+        best_move, _ = self.minimax(game_state, self.depth, player=0)
+        return best_move
 
-    def minimax(self, state: GameState, depth: int, player: int) -> float:
+    def minimax(self, state: GameState, depth: int, player: int) -> Tuple[Action, float]:
         if depth == 0 or state.done:
-            return self.evaluation_function(state)
+            return Action.STOP, self.evaluation_function(state)
 
-        if player == 0:  # max player
-            val = -np.inf
-            for action in state.get_legal_actions(agent_index=player):
-                val = max(val, self.minimax(state.generate_successor(agent_index=player, action=action), depth=depth - 1, player=1 - player))
-            return val
+        val = -np.inf if (player == 0) else np.inf
+        best_action = Action.STOP
 
-        else:  # min player
-            val = np.inf
-            for action in state.get_legal_actions(agent_index=player):
-                val = min(val, self.minimax(state.generate_successor(agent_index=player, action=action), depth=depth, player=1 - player))
-            return val
+        for action in state.get_legal_actions(agent_index=player):
+            successor_state = state.generate_successor(agent_index=player, action=action)
+
+            if player == 0:  # max player
+                _, state_value = self.minimax(successor_state, depth=depth, player=1 - player)
+                if state_value > val:
+                    best_action, val = action, state_value
+
+            else:  # min player
+                _, state_value = self.minimax(successor_state, depth=depth - 1, player=1 - player)
+                if state_value < val:
+                    best_action, val = action, state_value
+
+        return best_action, val
 
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
@@ -180,39 +183,36 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         """
         Returns the minimax action using self.depth and self.evaluationFunction
         """
-        legal_moves = game_state.get_agent_legal_actions()
-        action_to_score = {action: self.alpha_beta(game_state.generate_successor(agent_index=0, action=action), self.depth, -np.inf, np.inf, player=0)
-                           for action in legal_moves}
-        best_action = max(action_to_score, key=action_to_score.get)
-        return best_action
+        best_move, _ = self.alpha_beta(game_state, self.depth, alpha=-np.inf, beta=np.inf, player=0)
+        return best_move
 
-    def alpha_beta(self, state: GameState, depth: int, alpha: float, beta: float, player: int) -> float:
-        if state.done or depth == 0:
-            return self.evaluation_function(state)
+    def alpha_beta(self, state: GameState, depth: int, alpha: float, beta: float, player: int) -> Tuple[Action, float]:
+        if depth == 0 or state.done:
+            return Action.STOP, self.evaluation_function(state)
 
-        if player == 0:
-            val = -np.inf
+        val = -np.inf if (player == 0) else np.inf
+        best_action = Action.STOP
 
-            for action in state.get_legal_actions(agent_index=player):
-                val = max(val, self.alpha_beta(state.generate_successor(agent_index=player, action=action),
-                                               depth - 1, alpha, beta, player=1 - player))
+        for action in state.get_legal_actions(agent_index=player):
+            successor_state = state.generate_successor(agent_index=player, action=action)
+
+            if player == 0:  # max player
+                _, state_value = self.alpha_beta(successor_state, depth - 1, alpha, beta, player=1 - player)
+                if state_value > val:
+                    best_action, val = action, state_value
                 if val >= beta:
                     break  # beta cutoff
                 alpha = max(alpha, val)
 
-            return val
-
-        else:  # player == 1
-            val = np.inf
-
-            for action in state.get_legal_actions(agent_index=player):
-                val = min(val, self.alpha_beta(state.generate_successor(agent_index=player, action=action),
-                                               depth, alpha, beta, player=1 - player))
+            else:  # min player
+                _, state_value = self.alpha_beta(successor_state, depth, alpha, beta, player=1 - player)
+                if state_value < val:
+                    best_action, val = action, state_value
                 if val <= alpha:
                     break  # alpha cutoff
                 beta = min(beta, val)
 
-            return val
+        return best_action, val
 
 
 class ExpectimaxAgent(MultiAgentSearchAgent):
@@ -227,28 +227,35 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
         The opponent should be modeled as choosing uniformly at random from their
         legal moves.
         """
-        legal_moves = game_state.get_agent_legal_actions()
-        action_to_score = {action: self.expectimax(game_state.generate_successor(agent_index=0, action=action), self.depth, player=0)
-                           for action in legal_moves}
-        best_action = max(action_to_score, key=action_to_score.get)
-        return best_action
+        best_move, _ = self.expectimax(game_state, self.depth, player=0)
+        return best_move
 
-    def expectimax(self, state: GameState, depth: int, player: int) -> float:
+    def expectimax(self, state: GameState, depth: int, player: int) -> Tuple[Action, float]:
         if depth == 0 or state.done:
-            return self.evaluation_function(state)
+            return Action.STOP, self.evaluation_function(state)
+
+        best_action = Action.STOP
 
         if player == 0:  # max player
             val = -np.inf
             for action in state.get_legal_actions(agent_index=player):
-                val = max(val, self.expectimax(state.generate_successor(agent_index=player, action=action), depth=depth - 1, player=1 - player))
-            return val
+                successor_state = state.generate_successor(agent_index=player, action=action)
+                _, state_value =self.expectimax(successor_state, depth=depth - 1, player=1 - player)
+                if state_value > val:
+                    best_action, val = action, state_value
+
+            return best_action, val
 
         else:  # chance player
             vals = []
             for action in state.get_legal_actions(agent_index=player):
-                vals.append(self.expectimax(state.generate_successor(agent_index=player, action=action), depth=depth, player=1 - player))
+                successor_state = state.generate_successor(agent_index=player, action=action)
+                _, state_value = self.expectimax(successor_state, depth=depth, player=1 - player)
+                vals.append(state_value)
 
-            return sum(vals) / len(vals)
+            avg = sum(vals) / len(vals)
+            return best_action, avg
+
 
 
 def monotonicity(board: np.ndarray) -> Tuple[float, float, float]:
@@ -339,6 +346,7 @@ def normalize(value: Union[float, np.ndarray], min_val: float, max_val: float):
 
     return normalized
 
+
 def better_evaluation_function(current_game_state):
     """
     Your extreme 2048 evaluation function (question 5).
@@ -349,7 +357,7 @@ def better_evaluation_function(current_game_state):
     max_tile = current_game_state.max_tile
     score = current_game_state.score
 
-    WEIGHTS = [2, 1, 0] # TODO can change coeffs
+    WEIGHTS = [2, 1, 0]  # TODO can change coeffs
 
     weights = np.array(WEIGHTS)
 
@@ -359,7 +367,6 @@ def better_evaluation_function(current_game_state):
     scores = [monotonicity(board),
               empty_board(board),
               clustering(board)]
-
 
     # print(f'scores before coeffs = {scores}')
     return np.sum(np.multiply(scores, coef))
